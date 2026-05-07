@@ -42,7 +42,7 @@ jobs:
 
       - name: Write dbt profiles.yml
         run: |
-          cat > ~/.dbt/profiles.yml << EOF
+          cat > /home/runner/.dbt/profiles.yml << EOF
           fintech_analytics:
             target: ci
             outputs:
