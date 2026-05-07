@@ -1,6 +1,5 @@
 -- models/intermediate/int_transactions_enriched.sql
 -- Business logic layer: joins all dimensions, adds fraud signals and derived flags.
--- This is the most interview-worthy model — be ready to walk through every decision.
 
 with transactions as (
     select * from {{ ref('stg_transactions') }}

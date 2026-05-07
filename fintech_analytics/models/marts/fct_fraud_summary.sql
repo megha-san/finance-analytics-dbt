@@ -1,6 +1,6 @@
 -- models/marts/fct_fraud_summary.sql
--- Daily fraud summary — the primary table powering the Looker Studio dashboard.
--- Aggregated so dashboard queries scan kilobytes, not gigabytes.
+-- Daily fraud summary —  primary table 
+-- Aggregated data
 
 with transactions as (
     select * from {{ ref('fct_transactions') }}

@@ -12,7 +12,7 @@ renamed as (
         card_last4,
         cast(issue_date as date)                        as issue_date,
         cast(expiry_date as date)                       as expiry_date,
-        -- Derive is_expired dynamically — don't trust the loaded value
+        -- Derive is_expired dynamically
         cast(expiry_date as date) < current_date()      as is_expired,
         cast(is_blocked as bool)                        as is_blocked,
         current_timestamp()                             as _loaded_at
