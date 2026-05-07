@@ -1,0 +1,72 @@
+version: 2
+
+models:
+  - name: fct_transactions
+    description: >
+      Core fact table. One row per completed/declined/reversed payment transaction.
+      Incremental materialization with daily partition and customer+fraud clustering.
+    columns:
+      - name: transaction_id
+        description: "Surrogate key — globally unique"
+        tests: [unique, not_null]
+      - name: customer_id
+        tests: [not_null]
+      - name: merchant_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_merchants')
+                field: merchant_id
+      - name: amount
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 50000
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['COMPLETED', 'DECLINED', 'REVERSED']
+      - name: composite_risk_score
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 5
+
+  - name: dim_customers
+    description: >
+      Customer dimension with behavioural spend profile aggregated from transactions.
+      SCD Type 1 — latest state only.
+    columns:
+      - name: customer_id
+        tests: [unique, not_null]
+      - name: fraud_segment
+        tests:
+          - accepted_values:
+              values: ['HIGH_FRAUD', 'ELEVATED_FRAUD', 'NORMAL']
+
+  - name: dim_merchants
+    description: >
+      Merchant dimension enriched with computed fraud rate and risk tier.
+    columns:
+      - name: merchant_id
+        tests: [unique, not_null]
+      - name: merchant_risk_tier
+        tests:
+          - accepted_values:
+              values: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
+
+  - name: fct_fraud_summary
+    description: >
+      Pre-aggregated daily fraud summary by multiple dimensions.
+      Powers Looker Studio dashboard. Query cost: ~KB vs ~GB on raw fct_transactions.
+    columns:
+      - name: transaction_date
+        tests: [not_null]
+      - name: fraud_rate
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1

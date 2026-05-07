@@ -1,0 +1,65 @@
+version: 2
+
+models:
+  - name: stg_transactions
+    description: "Cleaned and typed payment transactions. One row per transaction."
+    columns:
+      - name: transaction_id
+        description: "Surrogate key — globally unique transaction identifier"
+        tests: [unique, not_null]
+      - name: card_id
+        tests: [not_null]
+      - name: customer_id
+        tests: [not_null]
+      - name: merchant_id
+        tests: [not_null]
+      - name: amount
+        description: "Transaction amount in the card-holder's local currency"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 50000
+      - name: currency
+        tests: [not_null]
+      - name: transaction_ts
+        tests: [not_null]
+      - name: is_fraudulent
+        tests:
+          - not_null
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['COMPLETED', 'DECLINED', 'REVERSED']
+
+  - name: stg_customers
+    description: "Cleaned customer master data."
+    columns:
+      - name: customer_id
+        tests: [unique, not_null]
+      - name: risk_tier
+        tests:
+          - accepted_values:
+              values: ['LOW', 'MEDIUM', 'HIGH', 'VERY_HIGH']
+      - name: country
+        tests: [not_null]
+
+  - name: stg_merchants
+    description: "Cleaned merchant master. High-risk flag set for ONLINE_GAMING, CRYPTO_EXCHANGE, MONEY_TRANSFER."
+    columns:
+      - name: merchant_id
+        tests: [unique, not_null]
+      - name: category_code
+        tests: [not_null]
+
+  - name: stg_cards
+    description: "Cleaned card records. is_expired derived at query time."
+    columns:
+      - name: card_id
+        tests: [unique, not_null]
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id

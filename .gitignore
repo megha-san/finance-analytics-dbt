@@ -1,0 +1,18 @@
+# dbt
+target/
+dbt_packages/
+logs/
+
+# Credentials — NEVER commit these
+*.json
+profiles.yml
+
+# Data files — too large for git
+data_generator/output/
+
+# Python
+__pycache__/
+*.pyc
+.env
+venv/
+dbt-env/

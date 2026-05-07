@@ -1,0 +1,85 @@
+version: 2
+
+sources:
+  - name: raw
+    database: "finance-analytics-494921"
+    schema: raw
+    description: >
+      Raw landing tables loaded from GCS via `bq load`.
+      These are append-only and should never be modified directly.
+    config:
+      freshness:
+        warn_after:  {count: 24, period: hour}
+        error_after: {count: 48, period: hour}
+
+    tables:
+      - name: transactions
+        config: 
+          loaded_at_field: transaction_ts
+        description: "Raw payment transactions — 5M rows, partitioned by transaction_date"
+        columns:
+          - name: transaction_id
+            description: "Unique transaction identifier"
+            tests:
+              - unique
+              - not_null
+          - name: card_id
+            tests: [not_null]
+          - name: merchant_id
+            tests: [not_null]
+          - name: amount
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 0
+                  max_value: 50000
+          - name: is_fraudulent
+            tests:
+              - not_null
+          - name: status
+            tests:
+              - accepted_values:
+                  values: ['COMPLETED', 'DECLINED', 'REVERSED']
+
+      - name: customers
+        description: "Customer master — 50k synthetic records"
+        columns:
+          - name: customer_id
+            tests: [unique, not_null]
+          - name: risk_tier
+            tests:
+              - accepted_values:
+                  values: ['LOW', 'MEDIUM', 'HIGH', 'VERY_HIGH']
+
+      - name: merchants
+        description: "Merchant master — 5k records"
+        columns:
+          - name: merchant_id
+            tests: [unique, not_null]
+          - name: category_code
+            tests:
+              - accepted_values:
+                  values:
+                    - GROCERY
+                    - TRAVEL
+                    - RESTAURANT
+                    - ENTERTAINMENT
+                    - RETAIL
+                    - FUEL
+                    - HEALTHCARE
+                    - UTILITIES
+                    - ONLINE_GAMING
+                    - CRYPTO_EXCHANGE
+                    - MONEY_TRANSFER
+
+      - name: cards
+        description: "Card master — 80k cards linked to customers"
+        columns:
+          - name: card_id
+            tests: [unique, not_null]
+          - name: customer_id
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw', 'customers')
+                  field: customer_id
