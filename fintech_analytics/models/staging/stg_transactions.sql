@@ -1,6 +1,4 @@
 -- models/staging/stg_transactions.sql
--- Light cleaning only: type casting, renaming, no business logic.
--- Materialized as view — no storage cost, always fresh.
 
 with source as (
 
