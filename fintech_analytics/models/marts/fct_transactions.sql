@@ -1,10 +1,7 @@
 -- models/marts/fct_transactions.sql
 -- Core fact table. Incremental materialization with merge strategy.
 -- Partitioned by date, clustered by customer_id + is_fraudulent for query cost efficiency.
---
--- Interview talking point: "I chose incremental over table because at 5M rows
--- a full refresh costs ~20MB of BQ scan per run. Incremental processes only
--- new partitions, reducing daily run cost by ~95%."
+
 
 {{
     config(

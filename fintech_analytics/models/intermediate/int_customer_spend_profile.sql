@@ -1,6 +1,5 @@
 -- models/intermediate/int_customer_spend_profile.sql
 -- Aggregates per-customer behavioral features.
--- Mirrors the concept of a fraud feature store — good interview talking point.
 
 with transactions as (
     select * from {{ ref('stg_transactions') }}
