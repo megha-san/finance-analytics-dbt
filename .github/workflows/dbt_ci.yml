@@ -1,0 +1,93 @@
+name: dbt CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'fintech_analytics/**'
+      - '.github/workflows/dbt_ci.yml'
+  workflow_dispatch:
+
+env:
+  DBT_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+
+jobs:
+  dbt-ci:
+    name: dbt Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fintech_analytics
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dbt-bigquery
+        run: |
+          pip install --upgrade pip
+          pip install dbt-bigquery==1.8.*
+
+      - name: Write GCP service account key
+        run: |
+          mkdir -p ~/.dbt
+          echo '${{ secrets.GCP_SA_KEY }}' > ~/.dbt/gcp_sa_key.json
+
+      - name: Write dbt profiles.yml
+        run: |
+          cat > ~/.dbt/profiles.yml << EOF
+          fintech_analytics:
+            target: ci
+            outputs:
+              ci:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.GCP_PROJECT_ID }}
+                dataset: fintech_ci_${{ github.run_id }}
+                location: northamerica-northeast1
+                keyfile: ~/.dbt/gcp_sa_key.json
+                threads: 4
+                timeout_seconds: 300
+          EOF
+
+      - name: dbt deps
+        run: dbt deps
+
+      - name: dbt compile
+        run: dbt compile
+
+      - name: dbt build - staging layer
+        run: |
+          dbt build \
+            --select staging \
+            --target ci
+
+      - name: Upload dbt artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dbt-artifacts-${{ github.run_id }}
+          path: fintech_analytics/target/
+          retention-days: 7
+
+      - name: Cleanup CI BigQuery dataset
+        if: always()
+        run: |
+          pip install google-cloud-bigquery
+          python -c "
+          from google.cloud import bigquery
+          from google.oauth2 import service_account
+          import json, os
+          key_path = os.path.expanduser('~/.dbt/gcp_sa_key.json')
+          creds = service_account.Credentials.from_service_account_file(key_path)
+          client = bigquery.Client(credentials=creds, project='${{ secrets.GCP_PROJECT_ID }}')
+          dataset_id = 'fintech_ci_${{ github.run_id }}'
+          client.delete_dataset(dataset_id, delete_contents=True, not_found_ok=True)
+          print(f'Deleted dataset {dataset_id}')
+          "
