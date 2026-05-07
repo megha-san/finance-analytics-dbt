@@ -1,3 +1,4 @@
+
 name: dbt CI
 
 on:
@@ -36,8 +37,8 @@ jobs:
 
       - name: Write GCP service account key
         run: |
-          mkdir -p ~/.dbt
-          echo '${{ secrets.GCP_SA_KEY }}' > ~/.dbt/gcp_sa_key.json
+          mkdir -p /home/runner/.dbt
+          echo '${{ secrets.GCP_SA_KEY }}' > /home/runner/.dbt/gcp_sa_key.json
 
       - name: Write dbt profiles.yml
         run: |
@@ -51,7 +52,7 @@ jobs:
                 project: ${{ secrets.GCP_PROJECT_ID }}
                 dataset: fintech_ci_${{ github.run_id }}
                 location: northamerica-northeast1
-                keyfile: ~/.dbt/gcp_sa_key.json
+                keyfile: /home/runner/.dbt/gcp_sa_key.json
                 threads: 4
                 timeout_seconds: 300
           EOF
