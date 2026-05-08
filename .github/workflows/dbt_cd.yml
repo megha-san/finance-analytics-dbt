@@ -1,0 +1,69 @@
+name: dbt CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'fintech_analytics/**'
+
+jobs:
+  dbt-cd:
+    name: dbt Deploy to UAT
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fintech_analytics
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dbt-bigquery
+        run: |
+          pip install --upgrade pip
+          pip install dbt-bigquery==1.8.*
+
+      - name: Write GCP service account key
+        run: |
+          mkdir -p /home/runner/.dbt
+          echo '${{ secrets.GCP_SA_KEY }}' > /home/runner/.dbt/gcp_sa_key.json
+
+      - name: Write dbt profiles.yml
+        run: |
+          cat > /home/runner/.dbt/profiles.yml << EOF
+          fintech_analytics:
+            target: uat
+            outputs:
+              uat:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.GCP_PROJECT_ID }}
+                dataset: fintech_uat
+                location: northamerica-northeast1
+                keyfile: /home/runner/.dbt/gcp_sa_key.json
+                threads: 4
+                timeout_seconds: 300
+          EOF
+
+      - name: dbt deps
+        run: dbt deps
+
+      - name: dbt build - deploy to UAT
+        run: dbt build
+
+      - name: dbt docs generate
+        run: dbt docs generate
+
+      - name: Upload dbt artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dbt-cd-artifacts-${{ github.run_id }}
+          path: fintech_analytics/target/
+          retention-days: 30
