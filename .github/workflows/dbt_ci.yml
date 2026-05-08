@@ -57,6 +57,13 @@ jobs:
                 timeout_seconds: 300
           EOF
 
+      - name: Debug - show profiles.yml content
+        run: |
+          echo "=== profiles.yml content ==="
+          cat /home/runner/.dbt/profiles.yml
+          echo "=== files in .dbt folder ==="
+          ls -la /home/runner/.dbt/
+
       - name: dbt deps
         run: dbt deps
 
