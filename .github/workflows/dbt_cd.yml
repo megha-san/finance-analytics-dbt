@@ -3,8 +3,7 @@ name: dbt CD
 on:
   push:
     branches: [main]
-    paths:
-      - 'fintech_analytics/**'
+    workflow_dispatch:
 
 jobs:
   dbt-cd:
