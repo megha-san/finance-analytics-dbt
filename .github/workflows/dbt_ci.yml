@@ -1,3 +1,4 @@
+
 name: dbt CI
 
 on:
@@ -36,12 +37,12 @@ jobs:
 
       - name: Write GCP service account key
         run: |
-          mkdir -p ~/.dbt
-          echo '${{ secrets.GCP_SA_KEY }}' > ~/.dbt/gcp_sa_key.json
+          mkdir -p /home/runner/.dbt
+          echo '${{ secrets.GCP_SA_KEY }}' > /home/runner/.dbt/gcp_sa_key.json
 
       - name: Write dbt profiles.yml
         run: |
-          cat > ~/.dbt/profiles.yml << EOF
+          cat > /home/runner/.dbt/profiles.yml << EOF
           fintech_analytics:
             target: ci
             outputs:
@@ -51,10 +52,17 @@ jobs:
                 project: ${{ secrets.GCP_PROJECT_ID }}
                 dataset: fintech_ci_${{ github.run_id }}
                 location: northamerica-northeast1
-                keyfile: ~/.dbt/gcp_sa_key.json
+                keyfile: /home/runner/.dbt/gcp_sa_key.json
                 threads: 4
                 timeout_seconds: 300
           EOF
+
+      - name: Debug - show profiles.yml content
+        run: |
+          echo "=== profiles.yml content ==="
+          cat /home/runner/.dbt/profiles.yml
+          echo "=== files in .dbt folder ==="
+          ls -la /home/runner/.dbt/
 
       - name: dbt deps
         run: dbt deps
